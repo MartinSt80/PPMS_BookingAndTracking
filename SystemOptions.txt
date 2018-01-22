@@ -1,0 +1,34 @@
+#set to 'PPMS API' for direct calls, requires ProxyOptions.txt
+#set to 'Proxy' for calls over proxy
+calling_mode = PPMS API
+
+#PUMAPI/Tracker proxy
+#ip address of Proxy
+proxy_address = XXXXXXXXXXXXXXXXXXX
+#also change in ProxyOptions.txt at Proxy
+API_port = XXXXXXXXXXXXXXXX
+tracker_port = XXXXXXXXXXXXXXXX
+
+#PPMS_applet configuration
+
+#image locations
+logo_image = BIC_logo_transparent_32.ico
+image_URL = http://134.34.129.149/Plots/28.7BED8806.png
+
+#Change according to PPMS database
+PPMS_facilityid = 2
+PPMS_systemid = 6
+PPMS_systemcode = XXXXXXXXXXXXXXXXXXXXXX
+PPMS_URL = https://XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/
+tracker_URL = https://XXXXXXXXXXXXXXXXXXXXXXXXXXXXX/rt/
+
+#Tracker configuration
+#update every X min
+tracker_frequency = 1
+#logins which are not logged, comma separated
+ignored_logins = BIC_maintenance
+
+# AES key to encrypt communication with proxy, any key is fine
+#matching ip and key pair must be present in proxy key file
+AES_key = This is not a secure key
+
