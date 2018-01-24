@@ -10,7 +10,7 @@ from Tkinter import *
 import ttk
 from PIL import Image, ImageTk
 
-from lib import Options, PPMSAPICalls
+from lib import Options, PPMSAPICalls, Errors
 
 
 
@@ -33,7 +33,7 @@ class UserInfo:
 			self.user_id = id_call.getUserID(self.user_name, facility_id)
 			if self.user_name['lname'] == 'BIC':
 				self.user_name['fname'] = ''
-		except RuntimeError:
+		except Errors.APIError:
 			self.user_name = ('unknown user', '')
 			self.user_id = None
 
@@ -67,10 +67,7 @@ def configureRoot():
 # refreshes the mainframe, own function needed for frame.after in mainframeRefresher()
 def updateMainframe(oldframe=None):
 	# try to create the Applet content, if an error occurs (network connection is lost, ...) do not update
-	try:
-		frame = createMainFrame()
-	except:
-		return oldframe
+	frame = createMainFrame()
 
 	if oldframe is not None:
 		oldframe.destroy()
@@ -78,10 +75,8 @@ def updateMainframe(oldframe=None):
 
 
 def mainframeRefresher(frame=None):
-	try:
-		frame = updateMainframe(frame)
-	except:
-		pass
+
+	frame = updateMainframe(frame)
 
 	# if no mainframe could be created at start, exit
 	if frame is None:
@@ -152,7 +147,6 @@ def createMainFrame():
 						session_list = sorted(zip(bookedhours, users))
 						old_start, old_stop, old_user = None, None, None
 						fused_sessions = []
-
 						for session in session_list:
 							if old_user is not None:
 								temp_start, temp_stop, temp_user = session[0][0], session[0][-1], session[1]
