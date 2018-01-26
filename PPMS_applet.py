@@ -4,57 +4,87 @@ import requests
 from StringIO import StringIO
 import time
 import os
-import psutil
 import math
+import win32api
+import win32con
 from Tkinter import *
 import ttk
 from PIL import Image, ImageTk
 
 from lib import Options, PPMSAPICalls, Errors
 
+#Tracks messages of non-fatal Exceptions
+class ErrorLog:
+
+	def __init__(self):
+
+		self.active_errors = False
+		self.error_message = ''
+		self.booking_possible = True
+		self.valid_user_info = True
 
 
 # API calls to get full user name and user id from PPMS data base
 class UserInfo:
 
 	def __init__(self, facility_id):
-		for self.p in psutil.process_iter():
-			if 'explorer.exe' == self.p.name():
-				self.login = self.p.username().split('\\')[1]
-				break
-		else:
-			raise NameError('Login could not be determined; No owner of process: explorer.exe')
-		self.login = 'martin.stoeckl' 												#TODO: remove
-		name_call = PPMSAPICalls.NewCall(SYSTEM_OPTIONS.getValue('calling_mode'))
 
+		#self.login = win32api.GetUserNameEx(win32con.NameUserPrincipal).split('@')[0]
+		#self.user_id = None
+		self.login = 'martin.stoeckl' 												#TODO: remove
+
+		name_call = PPMSAPICalls.NewCall(SYSTEM_OPTIONS.getValue('calling_mode'))
 		try:
 			self.user_name = name_call.getUserFullName(self.login)
+		except Errors.APIError as e:
+			self.user_name = {'lname': 'unknown user', 'fname': ''}
+			ERROR_LOG.booking_possible = False
+			ERROR_LOG.error_message = e.msg
+			ERROR_LOG.valid_user_info = False
+		except Errors.FatalError as e:
+			exit(e.msg)
+		else:
 			id_call = PPMSAPICalls.NewCall(SYSTEM_OPTIONS.getValue('calling_mode'))
-			self.user_id = id_call.getUserID(self.user_name, facility_id)
-			if self.user_name['lname'] == 'BIC':
-				self.user_name['fname'] = ''
-		except Errors.APIError:
-			self.user_name = ('unknown user', '')
-			self.user_id = None
+			try:
+				self.user_id = id_call.getUserID(self.user_name, facility_id)
+			except Errors.APIError as e:
+				ERROR_LOG.booking_possible = False
+				ERROR_LOG.error_message = e.msg
+				ERROR_LOG.valid_user_info = False
+			except Errors.FatalError as e:
+				exit(e.msg)
 
+			if self.user_name['lname'] == 'BIC':
+					self.user_name['fname'] = ''
 
 # wrapper function, read options, get Info on User, start Tk, refresh the Mainframe
 def runIt():
 
 	global SYSTEM_OPTIONS
-
-	SYSTEM_OPTIONS = Options.OptionReader('SystemOptions.txt')
+	required_keys = ('calling_mode', 'PPMS_systemid', 'PPMS_facilityid', 'logo_image', 'image_URL')
+	try:
+		SYSTEM_OPTIONS = Options.OptionReader('SystemOptions.txt', required_keys)
+	except Errors.FatalError as e:
+		exit(e.msg)
 	systemname_call = PPMSAPICalls.NewCall(SYSTEM_OPTIONS.getValue('calling_mode'))
-	SYSTEM_OPTIONS.setValue('PPMS_systemname', systemname_call.getSystemName(SYSTEM_OPTIONS.getValue('PPMS_systemid')))
+	try:
+		system_name =  systemname_call.getSystemName(SYSTEM_OPTIONS.getValue('PPMS_systemid'))
+		SYSTEM_OPTIONS.setValue('PPMS_systemname', system_name)
+	except (Errors.APIError, Errors.FatalError) as e:
+		exit(e.msg + ' System name couldn\'t be determined.')
 
 	global USERINFO
 	USERINFO = UserInfo(SYSTEM_OPTIONS.getValue('PPMS_facilityid'))
 
+	global ERROR_LOG
+	ERROR_LOG = ErrorLog()
+
 	global root
 	root = Tk()
-
 	configureRoot()
+
 	mainframeRefresher()
+
 	root.mainloop()
 
 # setup the root title, include Bic logo
@@ -64,29 +94,25 @@ def configureRoot():
 	icon_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), SYSTEM_OPTIONS.getValue('logo_image'))
 	root.iconbitmap(default=icon_file)
 
-# refreshes the mainframe, own function needed for frame.after in mainframeRefresher()
-def updateMainframe(oldframe=None):
-	# try to create the Applet content, if an error occurs (network connection is lost, ...) do not update
-	frame = createMainFrame()
+# refreshes the mainframe
+def mainframeRefresher(frame=None):
 
+	frame = updateMainframe(frame)
+	frame.after(60000, mainframeRefresher, frame)
+
+
+# refreshes the mainframe, separate function needed for frame.after in mainframeRefresher()
+def updateMainframe(oldframe=None):
+	# try to create the Applet content, if an APIError occurs (network connection is lost, ...) do not update
+	frame = createMainFrame()
 	if oldframe is not None:
 		oldframe.destroy()
 	return frame
 
-
-def mainframeRefresher(frame=None):
-
-	frame = updateMainframe(frame)
-
-	# if no mainframe could be created at start, exit
-	if frame is None:
-		quit()
-	frame.after(60000, mainframeRefresher, frame)
-
 # creates the content of the Applet
 def createMainFrame():
 
-	# get the times, make sure schedule starts with 7 and ends 24
+	# get the times, make sure schedule starts with earliest 7 and ends latest 24
 	def calculateTimes():
 		current_time = time.strftime('%H %M', time.localtime()).split()
 		current_hour = int(current_time[0])
@@ -147,7 +173,10 @@ def createMainFrame():
 						session_list = sorted(zip(bookedhours, users))
 						old_start, old_stop, old_user = None, None, None
 						fused_sessions = []
+
 						for session in session_list:
+							if len(session[0]) == 0:
+								continue
 							if old_user is not None:
 								temp_start, temp_stop, temp_user = session[0][0], session[0][-1], session[1]
 
@@ -315,7 +344,10 @@ def createMainFrame():
 				return snippet + 'Please switch the lasers and the UV-lamp off!'
 
 			exp_call = PPMSAPICalls.NewCall(SYSTEM_OPTIONS.getValue('calling_mode'))
-			exp_value = int(exp_call.getExperience(USERINFO.login, SYSTEM_OPTIONS.getValue('PPMS_systemid')))
+			try:
+				exp_value = int(exp_call.getExperience(USERINFO.login, SYSTEM_OPTIONS.getValue('PPMS_systemid')))
+			except Errors.APIError:
+				exp_value = 0
 			greeting_text = timeofDay(current_hour) + USERINFO.user_name['fname'] + '! Welcome back at the ' + SYSTEM_OPTIONS.getValue('PPMS_systemname') + \
 				' on which you have already worked for ' + str(exp_value)
 			if exp_value == 1:
