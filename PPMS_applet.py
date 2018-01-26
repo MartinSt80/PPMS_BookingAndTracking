@@ -343,34 +343,34 @@ def createMainFrame():
 					return snippet + 'Please leave everything switched on!'
 				return snippet + 'Please switch the lasers and the UV-lamp off!'
 
-			exp_call = PPMSAPICalls.NewCall(SYSTEM_OPTIONS.getValue('calling_mode'))
-			try:
-				exp_value = int(exp_call.getExperience(USERINFO.login, SYSTEM_OPTIONS.getValue('PPMS_systemid')))
-			except Errors.APIError:
-				exp_value = 0
-			greeting_text = timeofDay(current_hour) + USERINFO.user_name['fname'] + '! Welcome back at the ' + SYSTEM_OPTIONS.getValue('PPMS_systemname') + \
-				' on which you have already worked for ' + str(exp_value)
-			if exp_value == 1:
-				greeting_text += ' hour.'
-			else:
-				greeting_text += ' hours.'
+			def greetingText():
+				exp_call = PPMSAPICalls.NewCall(SYSTEM_OPTIONS.getValue('calling_mode'))
+				try:
+					exp_value = int(exp_call.getExperience(USERINFO.login, SYSTEM_OPTIONS.getValue('PPMS_systemid')))
+				except Errors.APIError:
+					exp_value = 0
 
-			greeting = ttk.Label(parent_frame, text=greeting_text, font=("Calibri", 12), width=126, anchor='w',
+				greeting_text = timeofDay(current_hour) + USERINFO.user_name['fname'] + '! Welcome back at the ' + SYSTEM_OPTIONS.getValue('PPMS_systemname') + \
+					' on which you have already worked for ' + str(exp_value)
+				if exp_value == 1:
+					greeting_text += ' hour.'
+				else:
+					greeting_text += ' hours.'
+				return greeting_text
+
+			communication_frame = ttk.Frame(parent_frame, style='T.TFrame')
+
+			greeting = ttk.Label(communication_frame, text=greetingText(), font=("Calibri", 12), width=126, anchor='w',
 								 background='#edffee', borderwidth='0')
 			greeting.grid(column=0, row=0)
-			shutdown = ttk.Label(parent_frame, text=shutdownOptions(*nextSession(start_sessions, startsession_users)),
+			shutdown = ttk.Label(communication_frame, text=shutdownOptions(*nextSession(start_sessions, startsession_users)),
 								 width=126, anchor='w', font=("Calibri", 12), background='#edffee')
 			shutdown.grid(column=0, row=1)
+			return communication_frame
 
-
-		sessionframe, start_sessions, startsession_users = createSessionFrame(mainframe)
-		sessionframe.configure(style='T.TFrame')
-		sessionframe.grid(column=1, row=0)
-
-		communication_frame = ttk.Frame(mainframe, style='T.TFrame')
-		communication_frame.grid(column=0, row=1, columnspan=2)
-		createCommunication(communication_frame, start_sessions, startsession_users)
-
+		session_frame, start_sessions, startsession_users = createSessionFrame(mainframe)
+		communication_frame = createCommunication(mainframe, start_sessions, startsession_users)
+		return session_frame, communication_frame
 
 	current_time, current_hour, first_hour = calculateTimes()
 
@@ -386,7 +386,11 @@ def createMainFrame():
 	imageframe.configure(style='T.TFrame')
 	imageframe.grid(column=0, row=0)
 
-	createSessionandCommunication(mainframe)
+	sessionframe, communicationframe = createSessionandCommunication(mainframe)
+	sessionframe.configure(style='T.TFrame')
+	sessionframe.grid(column=1, row=0)
+	communicationframe.configure(style='T.TFrame')
+	communicationframe.grid(column=0, row=1, columnspan=2)
 
 	return mainframe
 
