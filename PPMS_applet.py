@@ -20,7 +20,6 @@ class ErrorLog:
 
 		self.active_errors = False
 		self.error_message = ''
-		self.booking_possible = True
 		self.valid_user_info = True
 
 
@@ -29,7 +28,7 @@ class UserInfo:
 
 	def __init__(self, facility_id):
 
-		#self.login = win32api.GetUserNameEx(win32con.NameUserPrincipal).split('@')[0]
+		#self.login = win32api.GetUserNameEx(win32con.NameUserPrincipal).split('@')[0] #TODO: uncomment
 		#self.user_id = None
 		self.login = 'martin.stoeckl' 												#TODO: remove
 
@@ -38,9 +37,9 @@ class UserInfo:
 			self.user_name = name_call.getUserFullName(self.login)
 		except Errors.APIError as e:
 			self.user_name = {'lname': 'unknown user', 'fname': ''}
-			ERROR_LOG.booking_possible = False
-			ERROR_LOG.error_message = e.msg
+			ERROR_LOG.error_message = 'User name call failed: ' + e.msg
 			ERROR_LOG.valid_user_info = False
+			ERROR_LOG.active_errors = True
 		except Errors.FatalError as e:
 			exit(e.msg)
 		else:
@@ -48,9 +47,9 @@ class UserInfo:
 			try:
 				self.user_id = id_call.getUserID(self.user_name, facility_id)
 			except Errors.APIError as e:
-				ERROR_LOG.booking_possible = False
-				ERROR_LOG.error_message = e.msg
+				ERROR_LOG.error_message = 'User ID call failed: ' + e.msg
 				ERROR_LOG.valid_user_info = False
+				ERROR_LOG.active_errors = True
 			except Errors.FatalError as e:
 				exit(e.msg)
 
@@ -59,6 +58,9 @@ class UserInfo:
 
 # wrapper function, read options, get Info on User, start Tk, refresh the Mainframe
 def runIt():
+
+	global ERROR_LOG
+	ERROR_LOG = ErrorLog()
 
 	global SYSTEM_OPTIONS
 	required_keys = ('calling_mode', 'PPMS_systemid', 'PPMS_facilityid', 'logo_image', 'image_URL')
@@ -69,15 +71,13 @@ def runIt():
 	systemname_call = PPMSAPICalls.NewCall(SYSTEM_OPTIONS.getValue('calling_mode'))
 	try:
 		system_name =  systemname_call.getSystemName(SYSTEM_OPTIONS.getValue('PPMS_systemid'))
-		SYSTEM_OPTIONS.setValue('PPMS_systemname', system_name)
 	except (Errors.APIError, Errors.FatalError) as e:
-		exit(e.msg + ' System name couldn\'t be determined.')
+		exit('System name couldn\'t be determined: ' + e.msg)
+	else:
+		SYSTEM_OPTIONS.setValue('PPMS_systemname', system_name)
 
 	global USERINFO
 	USERINFO = UserInfo(SYSTEM_OPTIONS.getValue('PPMS_facilityid'))
-
-	global ERROR_LOG
-	ERROR_LOG = ErrorLog()
 
 	global root
 	root = Tk()
@@ -103,7 +103,20 @@ def mainframeRefresher(frame=None):
 
 # refreshes the mainframe, separate function needed for frame.after in mainframeRefresher()
 def updateMainframe(oldframe=None):
-	# try to create the Applet content, if an APIError occurs (network connection is lost, ...) do not update
+
+	#Error handling: Release old errors
+	def handleErrors():
+
+		if ERROR_LOG.active_errors:
+			ERROR_LOG.error_message = ''
+			ERROR_LOG.active_errors = False
+			if not ERROR_LOG.valid_user_info:
+				new_USERINFO = UserInfo(SYSTEM_OPTIONS.getValue('PPMS_facilityid'))
+				USERINFO.login = new_USERINFO.login
+				USERINFO.user_id = new_USERINFO.user_id
+				USERINFO.user_name = new_USERINFO.user_name
+
+	handleErrors()
 	frame = createMainFrame()
 	if oldframe is not None:
 		oldframe.destroy()
@@ -209,10 +222,18 @@ def createMainFrame():
 
 					def bookIt():
 						booking_call = PPMSAPICalls.NewCall(SYSTEM_OPTIONS.getValue('calling_mode'))
-						booking_call.makeBooking(booking_start, booking_stop, booking_time, USERINFO.user_id, SYSTEM_OPTIONS.getValue('PPMS_systemid'), SYSTEM_OPTIONS.getValue('PPMS_facilityid'))
-						session_frame.destroy()
-						createSessionandCommunication(mainframe)
-						confirmation_window.destroy()
+						try:
+							booking_call.makeBooking(booking_start, booking_stop, booking_time, USERINFO.user_id, SYSTEM_OPTIONS.getValue('PPMS_systemid'), SYSTEM_OPTIONS.getValue('PPMS_facilityid'))
+						except Errors.APIError as e:
+							ERROR_LOG.error_message = 'Session booking failed: ' + e.msg
+							ERROR_LOG.active_errors = True
+						else:
+							sessionframe.destroy()
+							new_sessionframe, _ = createSessionandCommunication(mainframe)
+							new_sessionframe.configure(style='T.TFrame')
+							new_sessionframe.grid(column=1, row=0)
+						finally:
+							confirmation_window.destroy()
 
 					def cancelIt():
 						confirmation_window.destroy()
@@ -253,16 +274,26 @@ def createMainFrame():
 
 				booked_hours = []
 				users = []
-				new_call = PPMSAPICalls.NewCall(SYSTEM_OPTIONS.getValue('calling_mode'))
-				for session in new_call.getTodaysBookings(SYSTEM_OPTIONS.getValue('PPMS_facilityid'), SYSTEM_OPTIONS.getValue('PPMS_systemname')):
-					booked_hours.append((range(session['start'], session['stop'])))
-					users.append(session['user'])
+				todayssessions_call = PPMSAPICalls.NewCall(SYSTEM_OPTIONS.getValue('calling_mode'))
+
+				try:
+					todays_sessions = todayssessions_call.getTodaysBookings(SYSTEM_OPTIONS.getValue('PPMS_facilityid'), SYSTEM_OPTIONS.getValue('PPMS_systemname'))
+				except Errors.APIError as e:
+					ERROR_LOG.error_message = 'Retrieving booking information failed: ' + e.msg
+					ERROR_LOG.active_errors = True
+				else:
+					for session in todays_sessions:
+						booked_hours.append((range(session['start'], session['stop'])))
+						users.append(session['user'])
 
 				booked_sessions = []
 				start_sessions = []
 				start_sessions_users = []
 				try:
 					fused_sessions = fuseSuccessiveSessions(booked_hours, users)
+				except NoBookedSessionError:
+					pass
+				else:
 					for single_bookings, user in fused_sessions:
 						if sessioninProgress(single_bookings):
 							start_sessions.append(0)
@@ -272,10 +303,12 @@ def createMainFrame():
 							start_sessions_users.append(user)
 						for hours in single_bookings:
 							booked_sessions.append(hours - first_hour)
-				except NoBookedSessionError:
-					pass
 
 				button_list = []
+				if not ERROR_LOG.active_errors:
+					button_state = 'normal'
+				else:
+					button_state = 'disabled'
 				for i in range(8):
 					try:
 						booked_sessions.index(i)
@@ -295,12 +328,11 @@ def createMainFrame():
 							pass
 					except ValueError:
 						booking_button = Button(session_frames[i], text="Book this session", font=("Calibri", 12),
-												padx=2, pady=6, background='#ffda26')
+												padx=2, pady=6, background='#ffda26', state=button_state)
 						booking_button.config(command=lambda button=booking_button: bookThisSession(button))
 						booking_button.grid(sticky=(W))
 						button_list.append((booking_button, i))
 				return start_sessions, start_sessions_users
-
 
 			sessionframe = ttk.Frame(mainframe, style='T.TFrame')
 			session_subframes = createSessionSubframes(sessionframe)
@@ -347,8 +379,12 @@ def createMainFrame():
 				exp_call = PPMSAPICalls.NewCall(SYSTEM_OPTIONS.getValue('calling_mode'))
 				try:
 					exp_value = int(exp_call.getExperience(USERINFO.login, SYSTEM_OPTIONS.getValue('PPMS_systemid')))
-				except Errors.APIError:
-					exp_value = 0
+				except Errors.APIError as e:
+					if e.empty_response:
+						exp_value = 0
+					else:
+						exp_value = 'some'
+
 
 				greeting_text = timeofDay(current_hour) + USERINFO.user_name['fname'] + '! Welcome back at the ' + SYSTEM_OPTIONS.getValue('PPMS_systemname') + \
 					' on which you have already worked for ' + str(exp_value)
@@ -356,16 +392,24 @@ def createMainFrame():
 					greeting_text += ' hour.'
 				else:
 					greeting_text += ' hours.'
+
 				return greeting_text
 
 			communication_frame = ttk.Frame(parent_frame, style='T.TFrame')
 
-			greeting = ttk.Label(communication_frame, text=greetingText(), font=("Calibri", 12), width=126, anchor='w',
-								 background='#edffee', borderwidth='0')
-			greeting.grid(column=0, row=0)
-			shutdown = ttk.Label(communication_frame, text=shutdownOptions(*nextSession(start_sessions, startsession_users)),
-								 width=126, anchor='w', font=("Calibri", 12), background='#edffee')
-			shutdown.grid(column=0, row=1)
+			if ERROR_LOG.active_errors:
+				logged_error = ttk.Label(communication_frame, text=ERROR_LOG.error_message, font=("Calibri", 12), width=126, anchor='w',
+									 background='#ffb3b3', borderwidth='0')
+				logged_error.grid(column=0, row=0)
+
+			else:
+				greeting = ttk.Label(communication_frame, text=greetingText(), font=("Calibri", 12), width=126, anchor='w',
+									 background='#edffee', borderwidth='0')
+				greeting.grid(column=0, row=0)
+				shutdown = ttk.Label(communication_frame, text=shutdownOptions(*nextSession(start_sessions, startsession_users)),
+									 width=126, anchor='w', font=("Calibri", 12), background='#edffee')
+				shutdown.grid(column=0, row=1)
+
 			return communication_frame
 
 		session_frame, start_sessions, startsession_users = createSessionFrame(mainframe)
