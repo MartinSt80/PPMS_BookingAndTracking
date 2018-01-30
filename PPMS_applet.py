@@ -28,9 +28,9 @@ class UserInfo:
 
 	def __init__(self, facility_id):
 
-		#self.login = win32api.GetUserNameEx(win32con.NameUserPrincipal).split('@')[0] #TODO: uncomment
-		#self.user_id = None
-		self.login = 'martin.stoeckl' 												#TODO: remove
+		# our microscopy computers use LDAP authentification, thus <PPMS_login>@ad
+		self.login = win32api.GetUserNameEx(win32con.NameUserPrincipal).split('@')[0]
+		self.user_id = None
 
 		name_call = PPMSAPICalls.NewCall(SYSTEM_OPTIONS.getValue('calling_mode'))
 		try:
