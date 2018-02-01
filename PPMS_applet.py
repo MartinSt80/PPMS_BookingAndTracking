@@ -32,6 +32,7 @@ class UserInfo:
 		self.login = win32api.GetUserNameEx(win32con.NameUserPrincipal).split('@')[0]
 		self.user_id = None
 
+
 		name_call = PPMSAPICalls.NewCall(SYSTEM_OPTIONS.getValue('calling_mode'))
 		try:
 			self.user_name = name_call.getUserFullName(self.login)
@@ -63,7 +64,7 @@ def runIt():
 	ERROR_LOG = ErrorLog()
 
 	global SYSTEM_OPTIONS
-	required_keys = ('calling_mode', 'PPMS_systemid', 'PPMS_facilityid', 'logo_image', 'image_URL')
+	required_keys = ('calling_mode', 'PPMS_systemid', 'PPMS_facilityid', 'logo_image', 'image_URL', 'alternate_temp_image')
 	try:
 		SYSTEM_OPTIONS = Options.OptionReader('SystemOptions.txt', required_keys)
 	except Errors.FatalError as e:
@@ -143,9 +144,13 @@ def createMainFrame():
 	def createImageFrame(parent):
 
 		imageframe = ttk.Frame(parent)
-		open_temperature_image = requests.get(SYSTEM_OPTIONS.getValue('image_URL'))
-		raw_temperature_image = Image.open(StringIO(open_temperature_image.content))
-		open_temperature_image.close()
+		try:
+			open_temperature_image = requests.get(SYSTEM_OPTIONS.getValue('image_URL'))
+			raw_temperature_image = Image.open(StringIO(open_temperature_image.content))
+			open_temperature_image.close()
+		except IOError:
+			raw_temperature_image = Image.open(SYSTEM_OPTIONS.getValue('alternate_temp_image'))
+
 		temperature_image = ImageTk.PhotoImage(raw_temperature_image)
 		temp_label = Label(imageframe, image=temperature_image, bg='white')
 		temp_label.image = temperature_image
