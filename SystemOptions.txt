@@ -1,6 +1,6 @@
 #set to 'PPMS API' for direct calls, requires ProxyOptions.txt
 #set to 'Proxy' for calls over proxy
-calling_mode = PPMS API
+calling_mode = Proxy
 
 #PUMAPI/Tracker proxy
 #ip address of Proxy
@@ -13,14 +13,13 @@ tracker_port = XXXXXXXXXXXXXXXX
 
 #image locations
 logo_image = BIC_logo_transparent_32.ico
-image_URL = http://134.34.129.149/Plots/28.7BED8806.png
+image_URL = http://134.34.129.149/bic-templogger/plots/28.7BED8806.png
+alternate_temp_image = no_plot_available.png
 
 #Change according to PPMS database
 PPMS_facilityid = 2
 PPMS_systemid = 6
 PPMS_systemcode = XXXXXXXXXXXXXXXXXXXXXX
-PPMS_URL = https://XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/
-tracker_URL = https://XXXXXXXXXXXXXXXXXXXXXXXXXXXXX/rt/
 
 #Tracker configuration
 #update every X min
