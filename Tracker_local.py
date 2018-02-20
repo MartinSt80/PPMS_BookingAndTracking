@@ -39,5 +39,6 @@ class NewTrackerCall:
 def getUserLogin():
 	return win32api.GetUserNameEx(win32con.NameUserPrincipal).split('@')[0]
 
+required_keys = ('PPMS_systemid', 'PPMS_systemcode', 'tracker_frequency', 'ignored_logins', 'tracker_URL')
 SYSTEM_OPTIONS = Options.OptionReader('SystemOptions.txt')
 tracker_call = NewTrackerCall(getUserLogin())
