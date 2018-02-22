@@ -4,21 +4,21 @@ calling_mode = Proxy
 
 #PUMAPI/Tracker proxy
 #ip address of Proxy
-proxy_address = 134.34.129.149
+proxy_address = XXXXXXXXXXXXXX
 #also change in ProxyOptions.txt at Proxy
-API_port = 50000
-tracker_port = 50500
+API_port = XXXXXXXXXX
+tracker_port = XXXXXXXXXXXXXXXX
 
 #PPMS_applet configuration
 #image locations
 logo_image = BIC_logo_transparent_32.ico
-image_URL = http://134.34.129.149/bic-templogger/plots/28.7BED8806.png
+image_URL = http://134.34.129.149/bic-templogger/plots/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.png
 alternate_temp_image = no_plot_available.png
 
 #Change according to PPMS database
 PPMS_facilityid = 2
-PPMS_systemid = 6
-PPMS_systemcode = 358442
+PPMS_systemid = XXXXXXXXXXXXXX
+PPMS_systemcode = XXXXXXXXXXXXXXXXXXXXXXXX
 
 #Tracker configuration
 #update every X min, adjust to interval set in the task scheduler
