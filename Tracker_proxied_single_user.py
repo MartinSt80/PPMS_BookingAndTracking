@@ -39,5 +39,9 @@ class NewTrackeroverProxy:
 
 
 required_keys = ('PPMS_systemid', 'PPMS_systemcode', 'tracker_frequency', 'ignored_logins', 'proxy_address', 'tracker_port', 'user_login')
-SYSTEM_OPTIONS = Options.OptionReader('SystemOptions.txt')
-NewTrackeroverProxy(SYSTEM_OPTIONS.getValue('user_login'))
+try:
+	SYSTEM_OPTIONS = Options.OptionReader('SystemOptions.txt', required_keys)
+except Exception as e:
+	exit(str(e))
+else:
+	NewTrackeroverProxy(SYSTEM_OPTIONS.getValue('user_login'))

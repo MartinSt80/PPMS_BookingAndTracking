@@ -45,5 +45,9 @@ def getUserLogin():
 	return win32api.GetUserNameEx(win32con.NameUserPrincipal).split('@')[0]
 
 required_keys = ('PPMS_systemid', 'PPMS_systemcode', 'tracker_frequency', 'ignored_logins', 'proxy_address', 'tracker_port')
-SYSTEM_OPTIONS = Options.OptionReader('SystemOptions.txt')
+try:
+	SYSTEM_OPTIONS = Options.OptionReader('SystemOptions.txt', required_keys)
+except Exception as e:
+	exit(str(e))
+
 NewTrackeroverProxy(getUserLogin())

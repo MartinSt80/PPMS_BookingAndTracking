@@ -7,7 +7,6 @@ import os
 from lib import Options
 
 required_keys = ('PPMS_facilityid', 'PPMS_systemid', 'tracker_frequency', 'user_login')
-
 try:
     system_options = Options.OptionReader('SystemOptions.txt', required_keys)
 except Exception as e:
