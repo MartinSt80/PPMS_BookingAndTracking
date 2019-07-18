@@ -1,32 +1,36 @@
-#set to 'PPMS API' for direct calls, requires ProxyOptions.txt
-#set to 'Proxy' for calls over proxy
+# Calling mode
+# set to 'PPMS API' for direct calls, requires ProxyOptions.txt
+# set to 'Proxy' for calls over proxy
 calling_mode = Proxy
 
-#PUMAPI/Tracker proxy
-#ip address of Proxy
-proxy_address = XXXXXXXXXXXXXX
-#also change in ProxyOptions.txt at Proxy
-API_port = XXXXXXXXXX
-tracker_port = XXXXXXXXXXXXXXXX
+# PUMAPI/Tracker proxy
+# ip address of Proxy
+proxy_address = XXX.XXX.XXX.XXX
+# also change in ProxyOptions.txt at Proxy
+API_port = XXXXXX
+tracker_port = XXXXXXX
 
-#PPMS_applet configuration
-#image locations
+# PPMS_applet configuration
+# image locations
 logo_image = BIC_logo_transparent_32.ico
-image_URL = http://134.34.129.149/bic-templogger/plots/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.png
+image_URL = http://XXX.XXX.XXX.XXX/XXXXXXX.png
 alternate_temp_image = no_plot_available.png
 
-#Change according to PPMS database
+# Change according to PPMS database
 PPMS_facilityid = 2
-PPMS_systemid = XXXXXXXXXXXXXX
-PPMS_systemcode = XXXXXXXXXXXXXXXXXXXXXXXX
+PPMS_systemid = XXXX
+PPMS_systemcode = XXXXXXXXXXXXXXXXXXXXXXXXXX
 
-#Tracker configuration
-#update every X min, adjust to interval set in the task scheduler
+# Tracker configuration
+# update every X min, adjust to interval set in the task scheduler
 tracker_frequency = 1
-#logins which are not logged, comma separated
-ignored_logins = BIC_maintenance
+# logins which are not logged, comma separated
+ignored_logins = XXXXXXXXX
+
+# if a single user is used as login, specify it here
+user_login = XXXXXXXXX
 
 # AES key to encrypt communication with proxy, any key is fine
-#matching ip and key pair must be present in proxy key file
-AES_key = This is not a secure key
+# matching ip and key pair must be present in proxy key file
+AES_key = This is a test key
 

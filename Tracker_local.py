@@ -6,6 +6,7 @@ import win32api
 import win32con
 
 from lib import Options
+from lib import PPMSAPICalls
 
 
 class NewTrackerCall:
