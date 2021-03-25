@@ -4,7 +4,7 @@ import datetime
 import argparse
 from pathlib import Path
 
-from lib import PPMSAPICalls
+from ppms_lib import PPMSAPICalls
 
 
 def transfer_logs_to_ppms():

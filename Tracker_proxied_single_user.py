@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from lib import Options, TrackerCall
+from time import sleep
+
+from ppms_lib import Options, TrackerCall
 
 required_keys = ('PPMS_systemid', 'PPMS_systemcode', 'tracker_frequency', 'ignored_logins', 'proxy_address', 'tracker_port', 'user_login')
 
@@ -10,5 +12,6 @@ try:
 except Exception as e:
 	exit(str(e))
 
-TrackerCall.NewTrackeroverProxy(system_options.getValue('user_login'), system_options)
-
+while True:
+	TrackerCall.NewTrackeroverProxy(system_options.getValue('user_login'), system_options)
+	sleep(60 * system_options.getValue(int('tracker_frequency')))

@@ -4,7 +4,7 @@
 import time
 import os
 
-from lib import Options
+from ppms_lib import Options
 
 required_keys = ('PPMS_facilityid', 'PPMS_systemid', 'tracker_frequency', 'user_login')
 try:
