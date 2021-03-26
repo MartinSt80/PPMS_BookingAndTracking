@@ -22,4 +22,4 @@ user_login = win32api.GetUserNameEx(win32con.NameUserPrincipal).split('@')[0]
 
 while True:
 	TrackerCall.NewTrackerCall(user_login, system_options, proxy_options)
-	sleep(60 * system_options.getValue(int('tracker_frequency')))
+	sleep(60 * int(system_options.getValue('tracker_frequency')))
