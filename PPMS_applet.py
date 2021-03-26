@@ -8,7 +8,7 @@ from tkinter import *
 from tkinter import ttk
 
 
-from lib import Options, PPMSAPICalls, Errors
+from ppms_lib import Options, PPMSAPICalls, Errors
 
 
 # Tracks messages of non-fatal Exceptions
