@@ -14,4 +14,4 @@ except Exception as e:
 
 while True:
 	TrackerCall.NewTrackeroverProxy(system_options.getValue('user_login'), system_options)
-	sleep(60 * system_options.getValue(int('tracker_frequency')))
+	sleep(60 * int(system_options.getValue('tracker_frequency')))
