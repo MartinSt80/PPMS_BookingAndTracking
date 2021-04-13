@@ -28,7 +28,7 @@ class UserInfo:
         self.user_id = None
         self.login = login
 
-        name_call = PPMSAPICalls.NewCall(system_options.getValue('calling_mode'))
+        name_call = PPMSAPICalls.NewCall(system_options.getValue('calling_mode'), system_options)
         try:
             self.user_name = name_call.getUserFullName(self.login)
         except Errors.APIError as e:
@@ -39,7 +39,7 @@ class UserInfo:
         except Errors.FatalError as e:
             exit(e.msg)
         else:
-            id_call = PPMSAPICalls.NewCall(system_options.getValue('calling_mode'))
+            id_call = PPMSAPICalls.NewCall(system_options.getValue('calling_mode'), system_options)
             try:
                 self.user_id = id_call.getUserID(self.user_name, system_options.getValue('PPMS_facilityid'), )
             except Errors.APIError as e:
@@ -84,7 +84,7 @@ class PPMS_applet:
         except Errors.FatalError as e:
             exit('Required keys not found in SystemOptions.txt: ' + e.msg)
         else:
-            systemname_call = PPMSAPICalls.NewCall(system_options.getValue('calling_mode'))
+            systemname_call = PPMSAPICalls.NewCall(system_options.getValue('calling_mode'), system_options)
             try:
                 system_name = systemname_call.getSystemName(system_options.getValue('PPMS_systemid'))
             except (Errors.APIError, Errors.FatalError) as e:
@@ -249,7 +249,7 @@ class SessionFrame(ttk.Frame):
         def __bookThisSession(clicked_button):
 
             def __bookIt():
-                booking_call = PPMSAPICalls.NewCall(self.system_options.getValue('calling_mode'))
+                booking_call = PPMSAPICalls.NewCall(self.system_options.getValue('calling_mode'), self.system_options)
                 try:
                     booking_call.makeBooking(booking_start, booking_stop, booking_time, self.user_info.user_id,
                                              self.system_options.getValue('PPMS_systemid'),
@@ -306,7 +306,7 @@ class SessionFrame(ttk.Frame):
         booked_hours = []
         users = []
 
-        todays_sessions_call = PPMSAPICalls.NewCall(self.system_options.getValue('calling_mode'))
+        todays_sessions_call = PPMSAPICalls.NewCall(self.system_options.getValue('calling_mode'), self.system_options)
 
         try:
             todays_sessions = todays_sessions_call.getTodaysBookings(
@@ -430,7 +430,7 @@ class CommunicationFrame(ttk.Frame):
         return snippet + 'Please switch the lasers and the UV-lamp off!'
 
     def __greetingText(self):
-        exp_call = PPMSAPICalls.NewCall(self.system_options.getValue('calling_mode'))
+        exp_call = PPMSAPICalls.NewCall(self.system_options.getValue('calling_mode'), self.system_options)
         try:
             exp_value = int(
                 exp_call.getExperience(self.user_info.login, self.system_options.getValue('PPMS_systemid')))
