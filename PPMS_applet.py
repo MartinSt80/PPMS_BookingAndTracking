@@ -63,20 +63,20 @@ class PPMS_applet:
         self.error_log = ErrorLog()
 
         # Read systems options, and add system name
-        self.system_options = self.__readSystemOptions()
+        self.system_options = self._readSystemOptions()
 
         # Retrieve full user name and id from PPMS
         self.user_info = UserInfo(user_login, self.system_options, self.error_log)
 
         self.root = Tk()
-        self.__configureRoot()
+        self._configureRoot()
 
-        self.__mainframeRefresher()
+        self._mainframeRefresher()
 
         self.root.mainloop()
 
     # Read SystemOptions.txt, add system name
-    def __readSystemOptions(self):
+    def _readSystemOptions(self):
         required_keys = (
             'calling_mode', 'PPMS_systemid', 'PPMS_facilityid', 'logo_image', 'image_URL', 'alternate_temp_image')
         try:
@@ -94,29 +94,29 @@ class PPMS_applet:
                 return system_options
 
     # setup the root title, include Bic logo
-    def __configureRoot(self):
+    def _configureRoot(self):
         self.root.title('Info on your session at the ' + self.system_options.getValue('PPMS_systemname'))
         icon_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                  self.system_options.getValue('logo_image'))
         self.root.iconbitmap(default=icon_file)
 
     # refreshes the mainframe
-    def __mainframeRefresher(self, frame=None):
+    def _mainframeRefresher(self, frame=None):
 
 
-        frame = self.__updateMainframe(frame)
-        frame.after(60000, self.__mainframeRefresher, frame)
+        frame = self._updateMainframe(frame)
+        frame.after(60000, self._mainframeRefresher, frame)
 
     # refreshes the mainframe, separate function needed for frame.after in mainframeRefresher()
-    def __updateMainframe(self, oldframe=None):
-        self.__handleErrors()
+    def _updateMainframe(self, oldframe=None):
+        self._handleErrors()
         frame = MainFrame(self.root, self.system_options, self.user_info, self.error_log)
         if oldframe is not None:
             oldframe.destroy()
         return frame
 
     # Error handling: Release old errors
-    def __handleErrors(self):
+    def _handleErrors(self):
         if self.error_log.active_errors:
             self.error_log.error_message = ''
             self.error_log.active_errors = False
@@ -181,11 +181,11 @@ class SessionFrame(ttk.Frame):
         self.user_info = user_info
         self.error_log = error_log
 
-        self.session_subframes = self.__createSessionSubframes()
-        self.start_sessions, self.startsession_users = self.__createSessions()
+        self.session_subframes = self._createSessionSubframes()
+        self.start_sessions, self.startsession_users = self._createSessions()
 
     # creates the single Session subframes for the hour labels and the session indicators or booking buttons
-    def __createSessionSubframes(self):
+    def _createSessionSubframes(self):
 
         session_subframes = []
         for i in range(8):
@@ -204,12 +204,12 @@ class SessionFrame(ttk.Frame):
         return session_subframes
 
     # creates the session indicator or booking buttons in each session frame
-    def __createSessions(self):
+    def _createSessions(self):
 
         class NoBookedSessionError(Exception):
             pass
 
-        def __fuseSuccessiveSessions(bookedhours, users):
+        def _fuseSuccessiveSessions(bookedhours, users):
             if len(bookedhours) > 0:
                 session_list = sorted(zip(bookedhours, users))
                 old_start, old_stop, old_user = None, None, None
@@ -234,7 +234,7 @@ class SessionFrame(ttk.Frame):
 
             raise NoBookedSessionError
 
-        def __sessioninProgress(booked_hours):
+        def _sessioninProgress(booked_hours):
             booked_hours = [n - Times.getFirstHour() for n in booked_hours]
             negative_zero_present = False
             positive_present = False
@@ -246,9 +246,9 @@ class SessionFrame(ttk.Frame):
                     positive_present = True
             return negative_zero_present and positive_present
 
-        def __bookThisSession(clicked_button):
+        def _bookThisSession(clicked_button):
 
-            def __bookIt():
+            def _bookIt():
                 booking_call = PPMSAPICalls.NewCall(self.system_options.getValue('calling_mode'), self.system_options)
                 try:
                     booking_call.makeBooking(booking_start, booking_stop, booking_time, self.user_info.user_id,
@@ -265,7 +265,7 @@ class SessionFrame(ttk.Frame):
                 finally:
                     confirmation_window.destroy()
 
-            def __cancelIt():
+            def _cancelIt():
                 confirmation_window.destroy()
 
             # if user login is not known, no booking is possible
@@ -297,10 +297,10 @@ class SessionFrame(ttk.Frame):
             buttons = ttk.Frame(confirmation_window, padding=6, style='T.TFrame')
             buttons.grid(row=1, column=0)
             ok_button = Button(buttons, text="Confirm", font=("Calibri", 12),
-                               padx=2, command=__bookIt)
+                               padx=2, command=_bookIt)
             ok_button.grid(row=0, column=0)
             cancel_button = Button(buttons, text="Cancel", font=("Calibri", 12),
-                                   padx=2, command=__cancelIt)
+                                   padx=2, command=_cancelIt)
             cancel_button.grid(row=0, column=1)
 
         booked_hours = []
@@ -316,19 +316,19 @@ class SessionFrame(ttk.Frame):
             self.error_log.active_errors = True
         else:
             for session in todays_sessions:
-                booked_hours.append((range(session['start'], session['stop'])))
+                booked_hours.append(list(range(session['start'], session['stop'])))
                 users.append(session['user'])
 
         booked_sessions = []
         start_sessions = []
         start_sessions_users = []
         try:
-            fused_sessions = __fuseSuccessiveSessions(booked_hours, users)
+            fused_sessions = _fuseSuccessiveSessions(booked_hours, users)
         except NoBookedSessionError:
             pass
         else:
             for single_bookings, user in fused_sessions:
-                if __sessioninProgress(single_bookings):
+                if _sessioninProgress(single_bookings):
                     start_sessions.append(0)
                     start_sessions_users.append(user)
                 else:
@@ -362,7 +362,7 @@ class SessionFrame(ttk.Frame):
             except ValueError:
                 booking_button = Button(self.session_subframes[i], text="Book this session", font=("Calibri", 12),
                                         padx=2, pady=6, background='#ffda26', state=button_state)
-                booking_button.config(command=lambda button=booking_button: __bookThisSession(button))
+                booking_button.config(command=lambda button=booking_button: _bookThisSession(button))
                 booking_button.grid(sticky=(W))
                 button_list.append((booking_button, i))
         return start_sessions, start_sessions_users
@@ -386,17 +386,17 @@ class CommunicationFrame(ttk.Frame):
             logged_error.grid(column=0, row=0)
 
         else:
-            greeting = ttk.Label(self, text=self.__greetingText(), font=("Calibri", 12), width=126,
+            greeting = ttk.Label(self, text=self._greetingText(), font=("Calibri", 12), width=126,
                                  anchor='w',
                                  background='#edffee', borderwidth='0')
             greeting.grid(column=0, row=0)
 
             shutdown = ttk.Label(self,
-                                 text=self.__shutdownOptions(*self.__nextSession(start_sessions, startsession_users)),
+                                 text=self._shutdownOptions(*self._nextSession(start_sessions, startsession_users)),
                                  width=126, anchor='w', font=("Calibri", 12), background='#edffee')
             shutdown.grid(column=0, row=1)
 
-    def __timeofDay(self, time):
+    def _timeofDay(self, time):
         if time < 12:
             return 'Good morning '
         if time < 18:
@@ -404,7 +404,7 @@ class CommunicationFrame(ttk.Frame):
         if time < 24:
             return 'Good evening '
 
-    def __nextSession(self, start_sessions, users):
+    def _nextSession(self, start_sessions, users):
         elapsed_time = Times.getCurrentTime() - Times.getFirstHour()
         for i in range(len(start_sessions)):
             if start_sessions[i] > elapsed_time:
@@ -412,7 +412,7 @@ class CommunicationFrame(ttk.Frame):
 
         return None, None
 
-    def __shutdownOptions(self, name, minutes):
+    def _shutdownOptions(self, name, minutes):
         # if now future booking, or next session is only tomorrow
         if minutes == None:
             return 'You are the last user for today, please make sure to switch off the microscope!'
@@ -429,7 +429,7 @@ class CommunicationFrame(ttk.Frame):
             return snippet + 'Please leave everything switched on!'
         return snippet + 'Please switch the lasers and the UV-lamp off!'
 
-    def __greetingText(self):
+    def _greetingText(self):
         exp_call = PPMSAPICalls.NewCall(self.system_options.getValue('calling_mode'), self.system_options)
         try:
             exp_value = int(
@@ -440,7 +440,7 @@ class CommunicationFrame(ttk.Frame):
             else:
                 exp_value = 'some'
 
-        greeting_text = self.__timeofDay(Times.getCurrentHour()) + self.user_info.user_name[
+        greeting_text = self._timeofDay(Times.getCurrentHour()) + self.user_info.user_name[
             'fname'] + '! Welcome back at the ' + self.system_options.getValue('PPMS_systemname') + \
                         ' on which you have already worked for ' + str(exp_value)
         if exp_value == 1:
