@@ -7,18 +7,17 @@ from pathlib import Path
 from ppms_lib import PPMSAPICalls
 
 
-
-
 class Session:
 
     session_number = 1
 
-    def __init__(self, start, stop, fac_id, sys_id, user):
+    def __init__(self, start, stop, fac_id, sys_id, sys_name, user):
         self.start_time = start.strftime('%Y-%m-%dT%H:%M:00')
         self.stop_time = stop.strftime('%Y-%m-%dT%H:%M:00')
         self.session_length_in_min = (stop - start) / datetime.timedelta(minutes=1) + 1
         self.facility_id = fac_id
         self.system_id = sys_id
+        self.system_name = sys_name
         self.user_login = user
         self.current_session_number = self.session_number
         Session.session_number += 1
@@ -44,7 +43,10 @@ class Session:
             self.booking_id = booking_response['id']
         except Exception as e:
             print(f'Failed to book session: {self.session_info}')
-            print(str(e))
+            try:
+                print(ppms_api_call.getTodaysBookings(self.facility_id, self.system_name, day=self.start_time.split('T')[0]))
+            except Exception as e:
+                print(e.msg)
         else:
             print(f'Session {self.booking_id} booked for {self.user_login} from {self.start_time} to {self.stop_time}')
 
@@ -55,17 +57,6 @@ class Session:
 
     def booking_info_for_stratocore(self):
         return (f'{self.booking_id}, {self.start_time}, {self.stop_time}, {self.session_length_in_min}\n')
-
-
-
-
-
-
-
-
-    if arguments.call_ppms:
-        create_session_overview_for_stratocore()
-
 
 class LoggedSessions:
 
@@ -94,6 +85,9 @@ class LoggedSessions:
             used_time = used_time[1:]
             print(f'Evaluating log file {log_file_path.name}')
 
+            _, system_id, _, _, _ = used_time[0].rstrip('\n').split(', ')
+            system_name = PPMSAPICalls.NewCall('PPMS API').getSystemName(system_id)
+
             # set session counter
             session_counter = len(session_list)
 
@@ -103,6 +97,7 @@ class LoggedSessions:
             last_datetime = None
             for line in used_time:
                 facility_id, system_id, frequency, user_login, time_stamp = line.rstrip('\n').split(', ')
+
                 # print(system_id, system_code, freq, user, time_stamp)
                 current_time = time.strptime(time_stamp, '%Y-%m-%dT%H:%M:00')
 
@@ -123,23 +118,17 @@ class LoggedSessions:
                 # Larger steps are breaks in between sessions, report last session, reinitialize
                 # Check if only a singular login has occured, ignore it
                 if start_datetime != last_datetime:
-                    ppms_session = Session(start_datetime, last_datetime, facility_id, system_id, user_login)
+                    ppms_session = Session(start_datetime, last_datetime, facility_id, system_id, system_name, user_login)
                     session_list.append(ppms_session)
-                    if arguments.call_ppms:
-                        ppms_session.create_tracker_call()
-                    else:
-                        ppms_session.print_session_info()
+                    ppms_session.print_session_info()
                 last_datetime = current_datetime
                 start_datetime = current_datetime
 
             # Report the final session
             if start_datetime != last_datetime:
-                ppms_session = Session(start_datetime, last_datetime, facility_id, system_id, user_login)
+                ppms_session = Session(start_datetime, last_datetime, facility_id, system_id, system_name, user_login)
                 session_list.append(ppms_session)
-                if arguments.call_ppms:
-                    ppms_session.create_tracker_call()
-                else:
-                    ppms_session.print_session_info()
+                ppms_session.print_session_info()
             print(f'{len(session_list) - session_counter} sessions have been found.')
             print('---------------------')
         print(f'In total {len(log_file_list)} files with {len(session_list)} sessions have been evaluated.')
@@ -161,14 +150,26 @@ class LoggedSessions:
                     f.write(session.booking_info_for_stratocore())
 
 
+
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser(description='Read the logfile with the tracked usage, call Tracker API '
                                                           'to transfer them to PPMS.')
     argument_parser.add_argument("log_file_path", type=str, help='Log file or directory tracking the used time on the instrument')
     argument_parser.add_argument("--call_ppms", action="store_true", help='If set, data is written to PPMS database.')
     arguments = argument_parser.parse_args()
-    log_path = Path(arguments.log_file_path)
 
-    logged_sessions = LoggedSessions(log_path)
+    bookings = PPMSAPICalls.NewCall('PPMS API').getBookedSessionsPeriod()
+    for b in bookings:
+        print(b)
 
-    session_list = logged_sessions.session_list
+    # bookings2 = PPMSAPICalls.NewCall('PPMS API').getTodaysBookings(2, filter=False, day='2021-07-07')
+    # for b in bookings2:
+    #     print(b)
+
+
+    # logged_sessions = LoggedSessions(Path(arguments.log_file_path))
+
+    # for session in logged_sessions.session_list:
+    #     print(session.booking_info_for_stratocore())
+    #     if arguments.call_ppms:
+    #         session.create_tracker_call()
